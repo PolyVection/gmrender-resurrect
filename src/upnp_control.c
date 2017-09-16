@@ -28,6 +28,7 @@
 #include "upnp_control.h"
 
 #define _GNU_SOURCE         /* See feature_test_macros(7) */
+#include <alsa/asoundlib.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -706,7 +707,30 @@ static int set_volume(struct action_event *event) {
 	const double fraction = exp(decibel / 20 * log(10));
 
 	change_volume(volume, db_volume);
-	output_set_volume(fraction);
+	
+	// ALSA HW VOLUME HACK
+        long min, max;
+	snd_mixer_t *handle;
+	snd_mixer_selem_id_t *sid;
+     	const char *card = "hw:1";
+     	const char *selem_name = "Digital";
+     
+     	snd_mixer_open(&handle, 0);
+     	snd_mixer_attach(handle, card);
+     	snd_mixer_selem_register(handle, NULL, NULL);
+     	snd_mixer_load(handle);
+     
+     	snd_mixer_selem_id_alloca(&sid);
+     	snd_mixer_selem_id_set_index(sid, 0);
+     	snd_mixer_selem_id_set_name(sid, selem_name);
+     	snd_mixer_elem_t* elem = snd_mixer_find_selem(handle, sid);
+     
+     	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+     	snd_mixer_selem_set_playback_volume_all(elem, volume_level * max / 100);
+     
+     	snd_mixer_close(handle);
+     
+	//output_set_volume(fraction);
 	set_mute_toggle(volume_level == 0);
 	service_unlock();
 
