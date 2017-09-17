@@ -730,7 +730,7 @@ static int set_volume(struct action_event *event) {
      
      	snd_mixer_close(handle);
      
-	//output_set_volume(fraction);
+	output_set_volume(1.0);
 	set_mute_toggle(volume_level == 0);
 	service_unlock();
 
