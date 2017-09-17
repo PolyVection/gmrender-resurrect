@@ -27,6 +27,7 @@
 #include "config.h"
 #endif
 
+#include <alsa/asoundlib.h>
 #include <assert.h>
 #include <gst/gst.h>
 #include <math.h>
@@ -538,6 +539,29 @@ static int output_gstreamer_init(void)
 	output_gstreamer_set_mute(0);
 	if (initial_db < 0) {
 		output_gstreamer_set_volume(exp(initial_db / 20 * log(10)));
+		
+		        // ALSA HW VOLUME HACK
+        		int volume_level = 40;
+        		long min, max;
+        		snd_mixer_t *handle;
+        		snd_mixer_selem_id_t *sid;
+        		const char *card = "hw:1";
+        		const char *selem_name = "Digital";
+        
+        		snd_mixer_open(&handle, 0);
+        		snd_mixer_attach(handle, card);
+        		snd_mixer_selem_register(handle, NULL, NULL);
+        		snd_mixer_load(handle);
+        
+        		snd_mixer_selem_id_alloca(&sid);
+        		snd_mixer_selem_id_set_index(sid, 0);
+        		snd_mixer_selem_id_set_name(sid, selem_name);
+        		snd_mixer_elem_t* elem = snd_mixer_find_selem(handle, sid);
+        
+        		snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+        		snd_mixer_selem_set_playback_volume_all(elem, volume_level * max / 100);
+        
+        		snd_mixer_close(handle);
 	}
 
 	return 0;
